@@ -1,0 +1,7 @@
+{:lein         {:profile "+shadow-cljs"}
+ :builds       {:app {:target     :browser
+                      :output-dir "resources/public/js"
+                      :asset-path "/js"
+                      :modules    {:app {:init-fn ti4-web-frontend.core/init!}}}}
+ :dev-http     {3000 {:root    "resources/public"
+                      :handler ti4-web-frontend.handler/app}}}
