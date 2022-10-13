@@ -30,6 +30,10 @@
   )
 
 
+(defn first-number [x]
+  (js/parseInt (second (re-find #"[A-Za-z]*([0-9]+)" (:MapName x)))))
+
+
 ;; -------------------------
 ;; Page components
 
@@ -43,7 +47,7 @@
      [:h1 "Welcome to Ti4 Async Web"]
      [:div.listmain (map (fn [x] [:div.listitem [:a {:key  (:MapName x)
                                    :href (path-for :game {:game-id (:MapName x)})
-                                   } (:MapName x)]]) (:games @state))]
+                                   } (:MapName x)]]) (sort-by first-number (:games @state)))]
      ]))
 
 
@@ -58,6 +62,7 @@
     (let [routing-data (session/get :route)
           item-name (get-in routing-data [:route-params :game-id])
           item (first (filter #(= item-name (:MapName %)) (:games @state)))]
+      (set! (.-title js/document) (:MapName item))
       [:span.main
        [:h1 (str "Game " item-name "")]
        [:img {:src (:MapURL item)}]
