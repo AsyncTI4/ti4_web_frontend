@@ -14,6 +14,8 @@
 (def router
   (reitit/router
    [["/" :index]
+    ["/gamenew"
+     ["/:game-id" :gamenew]]
     ["/game"
      ["/:game-id" :game]]
     ["/about" :about]]))
@@ -42,16 +44,40 @@
                      :response-format :json
                      :keywords? true})
   (fn []
-
+    (set! (.-title js/document) "Play by Discord Web Hosting")
     [:div.main
      [:h1 "Welcome to Ti4 Async Web"]
      [:div.listmain (map (fn [x] [:div.listitem [:a {:key  (:MapName x)
                                    :href (path-for :game {:game-id (:MapName x)})
-                                   } (:MapName x)]]) (sort-by first-number (:games @state)))]
+                                   } (:MapName x)]
+                                  [:a {:key  (:MapName x)
+                                       :href (path-for :gamenew {:game-id (:MapName x)})
+                                       } (:MapName x)]]) (sort-by first-number (:games @state)))]
      ]))
 
 
+(defn game-page-new []
+  (GET "/maps.json" {:handler refresh-games
+                     :response-format :json
+                     :keywords? true})
+  (reagent/create-class
+    {
+     :display-name "game-new"
 
+     :component-did-mount
+     (fn []
+       (new Zoomist. "#zoomist"))
+     :reagent-render
+     (fn []
+       (let [routing-data (session/get :route)
+             item-name (get-in routing-data [:route-params :game-id])
+             item (first (filter #(= item-name (:MapName %)) (:games @state)))]
+         [:div.main
+          [:div#zoomist {:data-zoomist-src (:MapURL item)}]
+          ]
+         )
+       )})
+  )
 
 (defn game-page []
   (GET "/maps.json" {:handler refresh-games
@@ -80,6 +106,7 @@
 (defn page-for [route]
   (case route
     :index #'home-page
+    :gamenew #'game-page-new
     :about #'about-page
     :game #'game-page))
 
