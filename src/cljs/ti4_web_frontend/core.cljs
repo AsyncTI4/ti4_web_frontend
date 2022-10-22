@@ -49,10 +49,7 @@
      [:h1 "Welcome to Ti4 Async Web"]
      [:div.listmain (map (fn [x] [:div.listitem [:a {:key  (:MapName x)
                                    :href (path-for :game {:game-id (:MapName x)})
-                                   } (:MapName x)]
-                                  [:a {:key  (:MapName x)
-                                       :href (path-for :gamenew {:game-id (:MapName x)})
-                                       } (:MapName x)]]) (sort-by first-number (:games @state)))]
+                                   } (:MapName x)]]) (sort-by first-number (:games @state)))]
      ]))
 
 
@@ -83,16 +80,22 @@
   (GET "/maps.json" {:handler refresh-games
                      :response-format :json
                      :keywords? true})
-  (fn []
+  (let [data (atom nil)]
+    (GET (str "https://bbg9uiqewd.execute-api.us-east-1.amazonaws.com/Prod/map/" (get-in (session/get :route) [:route-params :game-id]))
+         {:handler         (fn [x] (reset! data x))
+          :response-format :json
+          :keywords?       true})
+    (fn []
 
-    (let [routing-data (session/get :route)
-          item-name (get-in routing-data [:route-params :game-id])
-          item (first (filter #(= item-name (:MapName %)) (:games @state)))]
-      (set! (.-title js/document) (:MapName item))
-      [:span.main
-       [:h1 (str "Game " item-name "")]
-       [:img {:src (:MapURL item)}]
-       [:p [:a {:href (path-for :index)} "Back to the list of games"]]])))
+      (let [routing-data (session/get :route)
+            item-name (get-in routing-data [:route-params :game-id])
+            item (first (filter #(= item-name (:MapName %)) (:games @state)))]
+        (set! (.-title js/document) (if @data (str (:MapName item) " - Round " (:round @data)) (:MapName item)))
+
+        [:span.main
+         [:h1 (str "Game " item-name "")]
+         [:img {:src (:MapURL item)}]
+         [:p [:a {:href (path-for :index)} "Back to the list of games"]]]))))
 
 
 (defn about-page []

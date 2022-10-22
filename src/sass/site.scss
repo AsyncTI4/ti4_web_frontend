@@ -48,7 +48,10 @@ a {
 .listmain {
   display: flex;
   flex-direction: column;
+  flex-wrap: wrap;
+  height: 800px;
 }
-.listitem {
 
+.listitem {
+  width: 10vw;
 }
