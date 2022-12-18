@@ -17,6 +17,7 @@
                  [org.clojure/clojurescript "1.11.54"
                   :scope "provided"]
                  [cljs-ajax "0.8.3"]
+                 [haslett "0.1.7"]
                  [metosin/reitit "0.5.18"]
                  [pez/clerk "1.0.0"]
                  [venantius/accountant "0.2.5"
