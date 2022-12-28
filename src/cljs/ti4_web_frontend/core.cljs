@@ -4,6 +4,7 @@
             [clerk.core :as clerk]
             [cljs.core.async :as a :refer [<! >! alts! go-loop timeout go put!]]
             [haslett.client :as ws]
+            [haslett.format :as fmt]
             [reagent.core :as reagent :refer [atom]]
             [reagent.dom :as rdom]
             [reagent.session :as session]
@@ -28,10 +29,11 @@
     (:path (reitit/match-by-name router route))))
 
 (def state (atom {}))
+(def ws-stream (atom nil))
 
 (defn refresh-games [resp]
-  (swap! state assoc :games resp)
-  )
+  (swap! state assoc :games resp))
+
 
 
 (defn first-number [x]
@@ -45,20 +47,20 @@
 
   (GET "/maps.json" {:handler refresh-games
                      :response-format :json
-                     :keywords? true}) 
+                     :keywords? true})
 
   (fn []
-    (set! (.-title js/document) "Play by Discord Web Hosting") 
+    (set! (.-title js/document) "Play by Discord Web Hosting")
 
-    
+
     [:div.main
      [:h1 "Welcome to Ti4 Async Web"]
      [:div [:h3 (str "Total Active Games: " (count (:games @state)))]]
      [:div.listmain (map (fn [x] [:div.listitem [:a {:key  (:MapName x)
-                                                     :href (path-for :game {:game-id (:MapName x)})
-                                                     }(:MapName x)]]) (sort-by first-number (:games @state)))]
+                                                     :href (path-for :game {:game-id (:MapName x)})}
+                                                 (:MapName x)]]) (sort-by first-number (:games @state)))]]))
 
-     ]))
+
 
 
 (defn game-page-new []
@@ -66,78 +68,85 @@
                      :response-format :json
                      :keywords? true})
   (reagent/create-class
-    {
-     :display-name "game-new"
+   {:display-name "game-new"
 
-     :component-did-mount
-     (fn []
+    :component-did-mount
+    (fn [])
        ;       (new Zoomist. "#zoomist")
-       )
-     :reagent-render
-     (fn []
-       (let [routing-data (session/get :route)
-             item-name (get-in routing-data [:route-params :game-id])
-             item (first (filter #(= item-name (:MapName %)) (:games @state)))]
-         [:div.main
-          [:div#zoomist {:data-zoomist-src (:MapURL item)}]
-          ]
-         )
-       )})
-  )
 
-(defn game-page [] 
-  
+    :reagent-render
+    (fn []
+      (let [routing-data (session/get :route)
+            item-name (get-in routing-data [:route-params :game-id])
+            item (first (filter #(= item-name (:MapName %)) (:games @state)))]
+        [:div.main
+         [:div#zoomist {:data-zoomist-src (:MapURL item)}]]))}))
+
+
+
+
+(defn connect-ws [game-name on-connect]
+  (go (let [stream (<! (ws/connect (str "wss://4z4c1wj2e2.execute-api.us-east-1.amazonaws.com/dev?map=" game-name)))]
+        (reset! ws-stream stream)
+        (on-connect stream))))
+
+
+
+
+
+
+
+(defn game-page []
+
 
   (GET "/maps.json" {:handler refresh-games
                      :response-format :json
-                     :keywords? true}) 
+                     :keywords? true})
   (let [data (atom nil)
         imgurl (atom "")
-        sstream (atom nil)]
+        cycle-fn (fn [stream] (go-loop [stream stream]
+                                (let [[val ch] (alts! [(timeout 300000) (:source stream)])]
+                                  (if (= ch (:source stream))
+                                    (case (get val "command")
+                                      "pong" nil
+                                      "map" (reset! imgurl (get val "map"))
+                                      (println val))
+                                    (>! (:sink stream) {:command "ping"}))
+                                  (when-not (and (= ch (:source stream)) (nil? val))
+                                    (recur stream))
+                                  (when-not (= ch (:source stream))
+                                    (recur stream)))))]
 
 
     (reagent/create-class {:display-name "my-comp"
 
                            :component-did-mount
                            (fn []
-                             (go (let [stream (<! (ws/connect (str "wss://4z4c1wj2e2.execute-api.us-east-1.amazonaws.com/dev?map=" 
-                                                                   (get-in (session/get :route) [:route-params :game-id]))))]
-                                   (reset! sstream stream)
-                                   (>! (:sink stream) (str "MAP " (get-in (session/get :route) [:route-params :game-id])))
-                                (go-loop [stream stream] (let [[val ch] (alts! [(timeout 300000) (:source stream)])]
-                                              (if (= ch (:source stream))
-                                                (when (and (not (= val "PONG"))  (not (nil? val))) 
-                                                  (reset! imgurl val))
-                                                (>! (:sink stream) "PING"))
-                                              (when-not (and (= ch (:source stream)) (nil? val))
-                                                (recur stream))
-                                              (when-not (= ch (:source stream))
-                                                (recur stream))
-                                              ))))
-                             
+                             (connect-ws (get-in (session/get :route) [:route-params :game-id])
+                                         (fn [stream] (put! (:sink stream) {:command "map" :map (get-in (session/get :route) [:route-params :game-id])})
+                                           (cycle-fn stream)))
 
-                             
                              (let [routing-data (session/get :route)
                                    item-name (get-in routing-data [:route-params :game-id])
                                    item (first (filter #(= item-name (:MapName %)) (:games @state)))]
-                               (reset! imgurl (:MapURL item)) 
-                               (GET (str "https://bbg9uiqewd.execute-api.us-east-1.amazonaws.com/Prod/map/" (get-in (session/get :route) [:route-params :game-id])) 
-                                 {:handler         (fn [x] (reset! data x) 
-                                                     (set! (.-title js/document) (if @data (str (:MapName item) " - Round " (:round @data)) (:MapName item)))) 
-                                  :response-format :json 
-                                  :keywords?       true})
-                               ))
-                           
+                               (reset! imgurl (:MapURL item))
+                               (GET (str "https://bbg9uiqewd.execute-api.us-east-1.amazonaws.com/Prod/map/" (get-in (session/get :route) [:route-params :game-id]))
+                                 {:handler (fn [x] (reset! data x)
+                                             (set! (.-title js/document) (if @data (str (:MapName item) " - Round " (:round @data)) (:MapName item))))
+                                  :response-format :json
+                                  :keywords? true})))
+
+
                            :component-will-unmount
                            (fn []
-                             (ws/close @sstream))
-                           
+                             (ws/close @ws-stream))
+
                            :reagent-render
                            (fn []
                              (let [routing-data (session/get :route)
                                    item-name (get-in routing-data [:route-params :game-id])]
                                [:span.main
-                                [:h1 (str "Game " item-name "")][:input {:type "button" :value "Load Map" :on-click #(put! (:sink @sstream) (str "MAP " item-name))}]
+                                [:h1 (str "Game " item-name "")] [:input {:type "button" :value "Load Map" :on-click #(put! (:sink @ws-stream) {:command "map" :map item-name})}]
                                 [:img {:src @imgurl}]
                                 [:p [:a {:href (path-for :index)} "Back to the list of games"]]]))})))
 
@@ -184,8 +193,8 @@
         (reagent/after-render clerk/after-render!)
         (session/put! :route {:current-page (page-for current-page)
                               :route-params route-params})
-        (clerk/navigate-page! path)
-        ))
+        (clerk/navigate-page! path)))
+
     :path-exists?
     (fn [path]
       (boolean (reitit/match-by-path router path)))})
