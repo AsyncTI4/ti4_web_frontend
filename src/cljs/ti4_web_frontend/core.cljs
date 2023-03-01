@@ -98,6 +98,7 @@
                      :response-format :json
                      :keywords? true})
   (let [data (atom nil)
+        connected? (atom false)
         imgurl (atom "")
         cycle-fn (fn [stream]
                    (go-loop [stream stream]
@@ -108,21 +109,23 @@
                            "map" (reset! imgurl (get val "map"))
                            (println val))
                          (>! (:sink stream) {:command "ping"}))
-                       (when-not (and (= ch (:source stream)) (nil? val))
+                       (if (and (= ch (:source stream)) (nil? val))
+                         (reset! connected? false)
                          (recur stream))
                        (when-not (= ch (:source stream))
-                         (recur stream)))))]
-
+                         (recur stream)))))
+        ws-fun (fn []
+                 (connect-ws (get-in (session/get :route) [:route-params :game-id])
+                             (fn [stream] (put! (:sink stream) {:command "map" :map (get-in (session/get :route) [:route-params :game-id])})
+                               (reset! connected? true)
+                               (cycle-fn stream))))]
 
     (reagent/create-class
      {:display-name "single-game-render"
 
       :component-did-mount
       (fn []
-        (connect-ws (get-in (session/get :route) [:route-params :game-id])
-                    (fn [stream] (put! (:sink stream) {:command "map" :map (get-in (session/get :route) [:route-params :game-id])})
-                      (cycle-fn stream)))
-
+        (ws-fun)
         (let [routing-data (session/get :route)
               item-name (get-in routing-data [:route-params :game-id])
               item (first (filter #(= item-name (:MapName %)) (:games @state)))]
@@ -133,17 +136,18 @@
              :response-format :json
              :keywords? true})))
 
-
       :component-will-unmount
       (fn []
-        (ws/close @ws-stream))
+        (when @ws-stream (ws/close @ws-stream)))
 
       :reagent-render
       (fn []
         (let [routing-data (session/get :route)
               item-name (get-in routing-data [:route-params :game-id])]
           [:span.main
-           [:h1 (str "Game " item-name "")] [:input {:type "button" :value "Load Map" :on-click #(put! (:sink @ws-stream) {:command "map" :map item-name})}]
+           [:h1 (str "Game " item-name "")]
+           [:input {:type "button" :value "Load Map" :on-click #(put! (:sink @ws-stream) {:command "map" :map item-name})}]
+           [:input {:type "button" :value (if @connected? "Connected" "Disconnected") :disabled @connected? :on-click ws-fun}]
            [:img {:src @imgurl}]
            [:p [:a {:href (path-for :index)} "Back to the list of games"]]]))})))
 
