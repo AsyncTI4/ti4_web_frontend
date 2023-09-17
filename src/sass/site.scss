@@ -44,6 +44,11 @@ a {
   }
 }
 
+.main {
+    padding: 50px 0px;
+    display: block;
+}
+
 .listmain {
   display: flex;
   flex-direction: column;
@@ -53,4 +58,103 @@ a {
 
 .listitem {
   width: 10vw;
+}
+
+.gamebar {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height: 40px;
+    display: flex;
+    flex-direction: row;
+}
+
+.gametile {
+    background-color: #000;
+    border-radius: 2px;
+    height: 40px;
+    position: relative;
+    padding: 2px;
+    width: 150px;
+    margin: 0px 10px;
+    border: 2px;
+    border-style: solid;
+    overflow: hidden;
+    overflow-x: hidden;
+
+
+}
+
+.gametilelink {
+    font-size: 18pt;
+    font-weight: 600;
+}
+
+
+.newgame {
+    border-color: green;
+}
+
+.closebutton {
+    color: red;
+    position: absolute;
+    top: -7px;
+    right: 1px;
+
+}
+
+.loginbox {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    border-radius: 5px;
+    border-color: #000;
+    border-style: solid;
+    width: 150px;
+    height: 50px;
+    background-color: #4005B0;
+    padding: auto auto;
+    z-index: 5;
+    color: #fff;
+}
+
+.froglist {
+    display:flex;
+    flex-direction: column;
+}
+
+
+
+.outlier {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: #def;
+
+}
+
+.cc-game {
+    min-width: 400px;
+    min-height: 75px;
+    border-style: solid;
+    border-color: #def;
+    border-radius: 5px;
+    padding: 4px;
+    &:hover {
+        background-color: #456;
+
+    }
+}
+
+.cc-label {
+    position: absolute;
+    top: 30px;
+    left: 4px;
+}
+
+.cc-time {
+    position: absolute;
+    top: 3px;
+    right: 4px;
 }

@@ -18,13 +18,15 @@
                   :scope "provided"]
                  [cljs-ajax "0.8.3"]
                  [haslett "0.1.7"]
+                 [com.cemerick/url "0.1.1"]
                  [metosin/reitit "0.5.18"]
                  [pez/clerk "1.0.0"]
+                 [alandipert/storage-atom "2.0.1"]
                  [venantius/accountant "0.2.5"
                   :exclusions [org.clojure/tools.reader]]]
 
   :jvm-opts ["-Xmx1G"]
-  
+
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
             [lein-asset-minifier "0.4.6"
@@ -68,22 +70,15 @@
               :output-dir "target/cljsbuild/public/js/out"
               :source-map true
               :optimizations :none
-              :pretty-print  true}}
-
-
-
-            }
-   }
+              :pretty-print  true}}}}
 
   :figwheel
   {:http-server-root "public"
    :server-port 3449
    :nrepl-port 7002
-   :nrepl-middleware [cider.piggieback/wrap-cljs-repl
-                      ]
+   :nrepl-middleware [cider.piggieback/wrap-cljs-repl]
    :css-dirs ["resources/public/css"]
    :ring-handler ti4-web-frontend.handler/app}
-
 
   :sass {:source-paths ["src/sass"]
          :target-path "resources/public/css"}
@@ -98,15 +93,13 @@
                                   [nrepl "0.9.0"]
                                   [thheller/shadow-cljs "2.16.7"]
                                   [pjstadig/humane-test-output "0.11.0"]
-                                  
+
                                   ;; To silence warnings from sass4clj dependecies about missing logger implementation
-                                  [org.slf4j/slf4j-nop "1.7.25"]
-                                   ]
+                                  [org.slf4j/slf4j-nop "1.7.25"]]
 
                    :source-paths ["env/dev/clj"]
                    :plugins [[lein-figwheel "0.5.20"]
-                             [deraen/lein-sass4clj "0.3.1"]
-                             ]
+                             [deraen/lein-sass4clj "0.3.1"]]
 
                    :injections [(require 'pjstadig.humane-test-output)
                                 (pjstadig.humane-test-output/activate!)]
